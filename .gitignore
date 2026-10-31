@@ -1,0 +1,12 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+captures/
+# İmza anahtarları ASLA depoya girmez (secret olarak saklanır)
+*.keystore
+*.jks
+*.p12
+app/signing/

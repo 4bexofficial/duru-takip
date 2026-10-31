@@ -1,0 +1,62 @@
+name: Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: İmza anahtarını secret'tan çöz
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "HATA: KEYSTORE_B64 secret'ı yok. Repo Settings > Secrets and variables > Actions'tan KEYSTORE_B64 ve SIGN_PASS ekleyin." >&2
+            exit 1
+          fi
+          mkdir -p app/signing
+          echo "$KEYSTORE_B64" | base64 -d > app/signing/pilot.keystore
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Testler
+        run: gradle test --no-daemon
+
+      - name: Release APK derle
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/signing/pilot.keystore
+          SIGN_PASS: ${{ secrets.SIGN_PASS }}
+          KEY_ALIAS: duru
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: "1.0.${{ github.run_number }}"
+        run: gradle assembleRelease --no-daemon
+
+      - name: Paketle (apk + version.json)
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk duru-takip.apk
+          printf '{"versionCode": %s, "versionName": "1.0.%s", "url": "/app/duru-takip.apk", "notlar": "Otomatik yapim"}\n' "${{ github.run_number }}" "${{ github.run_number }}" > version.json
+
+      - name: GitHub Release yayınla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" duru-takip.apk version.json \
+            --title "Duru Takip 1.0.${{ github.run_number }}" \
+            --notes "Otomatik yapim - build ${{ github.run_number }}"
