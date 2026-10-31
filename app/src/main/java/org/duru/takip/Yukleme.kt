@@ -36,13 +36,14 @@ object Yukleme {
 		}
 	}
 
-	private fun kopyala(ctx: Context, oge: MedyaOge): File? = try {
-		val gecici = File.createTempFile("yukle", null, ctx.cacheDir)
-		ctx.contentResolver.openInputStream(oge.uri)?.use { girdi ->
-			gecici.outputStream().use { girdi.copyTo(it) }
-		} ?: return null
-		gecici
-	} catch (e: Exception) {
-		null
+	private fun kopyala(ctx: Context, oge: MedyaOge): File? {
+		return try {
+			val gecici = File.createTempFile("yukle", null, ctx.cacheDir)
+			val girdi = ctx.contentResolver.openInputStream(oge.uri) ?: return null
+			girdi.use { g -> gecici.outputStream().use { g.copyTo(it) } }
+			gecici
+		} catch (e: Exception) {
+			null
+		}
 	}
 }
