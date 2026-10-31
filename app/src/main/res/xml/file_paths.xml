@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+	<!-- İndirilen APK'yı FileProvider ile kurulum ekranına verebilmek için -->
+	<cache-path name="guncelleme" path="." />
+	<external-cache-path name="guncelleme_dis" path="." />
+</paths>

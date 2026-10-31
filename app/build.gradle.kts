@@ -38,6 +38,10 @@ android {
 		}
 	}
 
+	buildFeatures {
+		buildConfig = true // Guncelleyici BuildConfig.VERSION_CODE kullanır
+	}
+
 	compileOptions {
 		sourceCompatibility = JavaVersion.VERSION_17
 		targetCompatibility = JavaVersion.VERSION_17
