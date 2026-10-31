@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:padding="24dp">
+
+	<TextView
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:text="İzin ve onay"
+		android:textSize="24sp"
+		android:textStyle="bold"
+		android:textColor="#14532d"
+		android:layout_marginBottom="12dp" />
+
+	<ScrollView
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1">
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:lineSpacingMultiplier="1.3"
+			android:textColor="#333333"
+			android:text="Bu uygulama, telefonunuzdaki FOTOĞRAF ve VİDEOLARI Duru Takip sunucusuna yükler. Böylece yöneticiniz bunları müdür panelinden görebilir.\n\n• Sadece fotoğraf ve video yüklenir.\n• Başka hiçbir veri (rehber, konum, mesaj, mikrofon) alınmaz.\n• Yükleme sırasında bildirim çubuğunda bir bildirim görünür; gizli çalışmaz.\n• İstediğiniz zaman uygulamayı kaldırabilirsiniz.\n\nDevam etmek için bu kullanımı onaylıyor ve bir sonraki adımda fotoğraf/video erişim iznini vermeniz gerektiğini kabul ediyorsunuz." />
+	</ScrollView>
+
+	<Button
+		android:id="@+id/onayla"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="16dp"
+		android:text="Okudum, onaylıyorum"
+		android:backgroundTint="#14532d"
+		android:textColor="#FFFFFF" />
+</LinearLayout>
