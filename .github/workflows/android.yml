@@ -19,7 +19,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      # Android SDK, GitHub ubuntu runner'larında zaten kuruludur (ANDROID_HOME ayarlı).
+      # Eksik bileşenleri (platform/build-tools) AGP lisanslar kabulüyle kendisi indirir.
 
       - name: İmza anahtarını secret'tan çöz
         env:
