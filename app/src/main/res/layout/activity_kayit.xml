@@ -9,7 +9,7 @@
 	<ImageView
 		android:layout_width="96dp"
 		android:layout_height="96dp"
-		android:src="@drawable/ic_launcher"
+		android:src="@drawable/logo"
 		android:layout_marginBottom="16dp"
 		android:contentDescription="@string/app_name" />
 
@@ -19,7 +19,7 @@
 		android:text="Hoş geldin Duru"
 		android:textSize="28sp"
 		android:textStyle="bold"
-		android:textColor="#14532d" />
+		android:textColor="#db2777" />
 
 	<TextView
 		android:layout_width="match_parent"
@@ -35,6 +35,6 @@
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:text="Devam et"
-		android:backgroundTint="#14532d"
+		android:backgroundTint="#db2777"
 		android:textColor="#FFFFFF" />
 </LinearLayout>

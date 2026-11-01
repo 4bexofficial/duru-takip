@@ -3,6 +3,8 @@ package org.duru.takip
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import androidx.core.content.ContextCompat
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -28,6 +30,15 @@ class MainActivity : AppCompatActivity() {
 		setContentView(web)
 		web.settings.javaScriptEnabled = true
 		web.settings.domStorageEnabled = true
+		// Web sitesi gibi değil, uygulama gibi dursun: esneme/parlama yok, yakınlaştırma yok.
+		web.overScrollMode = View.OVER_SCROLL_NEVER
+		web.isVerticalScrollBarEnabled = false
+		web.isHorizontalScrollBarEnabled = false
+		web.settings.setSupportZoom(false)
+		web.settings.builtInZoomControls = false
+		web.settings.displayZoomControls = false
+		web.settings.textZoom = 100 // sistem yazı boyutu düzeni bozmasın
+		web.setBackgroundColor(ContextCompat.getColor(this, R.color.zemin))
 		web.webViewClient = WebViewClient()
 		web.loadUrl(Sabit.PANEL)
 

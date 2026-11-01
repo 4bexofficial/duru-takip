@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<style name="Theme.DuruTakip" parent="Theme.AppCompat.DayNight.NoActionBar">
-		<item name="colorPrimary">#14532d</item>
-		<item name="colorPrimaryDark">#0f3d22</item>
-		<item name="colorAccent">#14532d</item>
+		<item name="colorPrimary">#ec4899</item>
+		<item name="colorPrimaryDark">#db2777</item>
+		<item name="colorAccent">#a855f7</item>
+		<!-- Panelin pembe üst barıyla bütünleşik durum çubuğu -->
+		<item name="android:statusBarColor">#ec4899</item>
+		<item name="android:windowBackground">@color/zemin</item>
+		<item name="android:navigationBarColor">@color/zemin</item>
 	</style>
 </resources>

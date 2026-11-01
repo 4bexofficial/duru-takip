@@ -49,7 +49,7 @@ class YuklemeServisi : Service() {
 		NotificationCompat.Builder(this, KANAL)
 			.setContentTitle("Duru Takip")
 			.setContentText(metin)
-			.setSmallIcon(R.drawable.ic_launcher)
+			.setSmallIcon(R.drawable.ic_launcher_monochrome)
 			.setOngoing(true)
 			.build()
 

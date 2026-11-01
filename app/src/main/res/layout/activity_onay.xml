@@ -11,7 +11,7 @@
 		android:text="İzin ve onay"
 		android:textSize="24sp"
 		android:textStyle="bold"
-		android:textColor="#14532d"
+		android:textColor="#db2777"
 		android:layout_marginBottom="12dp" />
 
 	<ScrollView
@@ -33,6 +33,6 @@
 		android:layout_height="wrap_content"
 		android:layout_marginTop="16dp"
 		android:text="Okudum, onaylıyorum"
-		android:backgroundTint="#14532d"
+		android:backgroundTint="#db2777"
 		android:textColor="#FFFFFF" />
 </LinearLayout>
