@@ -1,18 +1,32 @@
 package org.duru.takip
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import androidx.core.content.ContextCompat
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 // Paneli (WhatsApp mesaj sistemi) WebView ile gösterir. Panel web olduğu için
 // arayüz/özellik değişiklikleri APK güncellemeden anında yansır.
 class MainActivity : AppCompatActivity() {
 	private lateinit var web: WebView
+
+	// Paneldeki <input type="file"> (mesaja foto/video/dosya ekleme) için telefonun dosya seçicisi.
+	// WebView bunu kendisi açmaz; WebChromeClient.onShowFileChooser ile biz açarız.
+	private var dosyaGeriDonus: ValueCallback<Array<Uri>>? = null
+	private val dosyaSecici = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { sonuc ->
+		val uris = WebChromeClient.FileChooserParams.parseResult(sonuc.resultCode, sonuc.data)
+		dosyaGeriDonus?.onReceiveValue(uris) // iptal edilirse null: input yeniden çalışabilsin diye yine bildir
+		dosyaGeriDonus = null
+	}
 
 	@SuppressLint("SetJavaScriptEnabled")
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +54,30 @@ class MainActivity : AppCompatActivity() {
 		web.settings.textZoom = 100 // sistem yazı boyutu düzeni bozmasın
 		web.setBackgroundColor(ContextCompat.getColor(this, R.color.zemin))
 		web.webViewClient = WebViewClient()
+		web.webChromeClient = object : WebChromeClient() {
+			override fun onShowFileChooser(
+				view: WebView,
+				geriDonus: ValueCallback<Array<Uri>>,
+				params: FileChooserParams
+			): Boolean {
+				dosyaGeriDonus?.onReceiveValue(null) // yarım kalan önceki seçimi kapat
+				dosyaGeriDonus = geriDonus
+				val secim = params.createIntent().apply {
+					addCategory(Intent.CATEGORY_OPENABLE)
+					if (type.isNullOrEmpty() || type == "*/*") {
+						type = "*/*"
+						putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*", "*/*"))
+					}
+				}
+				return try {
+					dosyaSecici.launch(Intent.createChooser(secim, "Dosya seç"))
+					true
+				} catch (e: ActivityNotFoundException) {
+					dosyaGeriDonus = null
+					false
+				}
+			}
+		}
 		web.loadUrl(Sabit.PANEL)
 
 		Guncelleyici.kontrolEt(this) // açılışta yeni sürüm var mı diye bak
