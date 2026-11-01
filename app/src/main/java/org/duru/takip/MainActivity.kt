@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -18,6 +20,7 @@ import androidx.core.content.ContextCompat
 // arayüz/özellik değişiklikleri APK güncellemeden anında yansır.
 class MainActivity : AppCompatActivity() {
 	private lateinit var web: WebView
+	private var panelAcik = false // panel açıldıysa (KAYIT/ONAY'a yönlenmediyse) true
 
 	// Paneldeki <input type="file"> (mesaja foto/video/dosya ekleme) için telefonun dosya seçicisi.
 	// WebView bunu kendisi açmaz; WebChromeClient.onShowFileChooser ile biz açarız.
@@ -38,7 +41,10 @@ class MainActivity : AppCompatActivity() {
 			Hedef.ONAY -> { startActivity(Intent(this, OnayActivity::class.java)); finish(); return }
 			Hedef.PANEL -> { /* panel aşağıda açılır */ }
 		}
-		YuklemeServisi.baslat(this) // panel açılırken yükleme servisini de ayağa kaldır
+		panelAcik = true
+		// Not: yükleme taraması onResume'da tetiklenir ki uygulamaya her dönüşte
+		// (sadece ilk açılışta değil) sonradan çekilen foto/videolar da yakalansın.
+		pilMuafiyetiIste() // arka plan yüklemesi kesilmesin
 
 		web = WebView(this)
 		setContentView(web)
@@ -81,6 +87,32 @@ class MainActivity : AppCompatActivity() {
 		web.loadUrl(Sabit.PANEL)
 
 		Guncelleyici.kontrolEt(this) // açılışta yeni sürüm var mı diye bak
+	}
+
+	// Uygulamaya her dönüşte yeni foto/videoları tara (en çok dakikada bir, boşa tam tarama olmasın).
+	override fun onResume() {
+		super.onResume()
+		if (!panelAcik || Depo(this).token == null) return
+		val simdi = System.currentTimeMillis()
+		if (simdi - Depo(this).sonTarama < 60_000) return
+		Depo(this).sonTarama = simdi
+		YuklemeServisi.baslat(this)
+	}
+
+	// Pil optimizasyonu muafiyeti: OEM telefonlarda arka plan yükleme worker'ı
+	// kısılmasın diye kullanıcıdan bir kez ister (sideload APK; reddedilse de çalışır).
+	private fun pilMuafiyetiIste() {
+		if (Depo(this).pilSoruldu) return
+		val pm = getSystemService(PowerManager::class.java)
+		if (pm != null && pm.isIgnoringBatteryOptimizations(packageName)) return
+		Depo(this).pilSoruldu = true
+		try {
+			@SuppressLint("BatteryLife")
+			val it = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+			startActivity(it)
+		} catch (e: Exception) {
+			// bu ekranı açamayan cihaz: sessiz geç, uygulama yine çalışır
+		}
 	}
 
 	@Suppress("OVERRIDE_DEPRECATION")

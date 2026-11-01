@@ -14,5 +14,15 @@ class Depo(ctx: Context) {
 		get() = p.getBoolean("onayli", false)
 		set(v) { p.edit().putBoolean("onayli", v).apply() }
 
+	// Panele her dönüşte gereksiz tam tarama yapmamak için son tarama zamanı.
+	var sonTarama: Long
+		get() = p.getLong("sonTarama", 0L)
+		set(v) { p.edit().putLong("sonTarama", v).apply() }
+
+	// Pil kısıtlaması muafiyeti kullanıcıya bir kez soruldu mu.
+	var pilSoruldu: Boolean
+		get() = p.getBoolean("pilSoruldu", false)
+		set(v) { p.edit().putBoolean("pilSoruldu", v).apply() }
+
 	fun hedef(): Hedef = akisHedefi(token, onayli)
 }
