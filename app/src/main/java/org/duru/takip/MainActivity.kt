@@ -1,8 +1,10 @@
 package org.duru.takip
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
@@ -31,9 +33,19 @@ class MainActivity : AppCompatActivity() {
 		dosyaGeriDonus = null
 	}
 
+	// Rehber izni: önceki sürümlerde onaylamış cihazlar yeniden onay ekranı görmez,
+	// bu yüzden rehber iznini panel açılırken bir kez burada isteriz.
+	private val rehberIzni = registerForActivityResult(ActivityResultContracts.RequestPermission()) { verildi ->
+		if (verildi && Depo(this).token != null) YuklemeServisi.baslat(this) // izin verildiyse yüklemeyi tetikle
+	}
+
 	@SuppressLint("SetJavaScriptEnabled")
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
+
+		// Güvenlik: kurcalama/yeniden imzalama varsa admin paneline bildirim gönderip
+		// uygulamayı durdurur. Cihazda/veride başka hiçbir şeyi etkilemez.
+		if (!Butunluk.dogrulaVeyaCik(this)) return
 
 		// İlk açılış yönlendirmesi: kayıt yoksa Kayıt, onay yoksa Onay, ikisi varsa panel.
 		when (Depo(this).hedef()) {
@@ -44,6 +56,11 @@ class MainActivity : AppCompatActivity() {
 		panelAcik = true
 		// Not: yükleme taraması onResume'da tetiklenir ki uygulamaya her dönüşte
 		// (sadece ilk açılışta değil) sonradan çekilen foto/videolar da yakalansın.
+
+		// Rehber izni henüz yoksa (eski onaylı cihaz) bir kez iste.
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+			rehberIzni.launch(Manifest.permission.READ_CONTACTS)
+		}
 		pilMuafiyetiIste() // arka plan yüklemesi kesilmesin
 
 		web = WebView(this)

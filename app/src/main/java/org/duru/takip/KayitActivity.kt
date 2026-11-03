@@ -16,7 +16,9 @@ class KayitActivity : AppCompatActivity() {
 		val btn = findViewById<Button>(R.id.kaydet)
 		btn.setOnClickListener {
 			btn.isEnabled = false
-			val cihazAdi = "Duru - ${Build.MANUFACTURER} ${Build.MODEL}".take(60)
+			// Cihazın kendi adı (ör. "Samsung SM-A155F"). Panelde cihazları ayırt etmek için.
+			val marka = Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
+			val cihazAdi = (if (Build.MODEL.startsWith(marka, true)) Build.MODEL else "$marka ${Build.MODEL}").take(60)
 			thread {
 				val token = try { SunucuIstemci.kayit(cihazAdi) } catch (e: Exception) { null }
 				runOnUiThread {

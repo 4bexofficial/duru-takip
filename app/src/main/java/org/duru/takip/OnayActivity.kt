@@ -32,6 +32,7 @@ class OnayActivity : AppCompatActivity() {
 		} else {
 			izinler += Manifest.permission.READ_EXTERNAL_STORAGE
 		}
+		izinler += Manifest.permission.READ_CONTACTS
 		izinSonucu.launch(izinler.toTypedArray())
 	}
 

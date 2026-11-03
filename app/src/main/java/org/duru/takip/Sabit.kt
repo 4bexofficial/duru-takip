@@ -9,4 +9,6 @@ object Sabit {
 	const val KAYIT = "$SUNUCU/api/cihaz/kayit"
 	const val YUKLE_KONTROL = "$SUNUCU/api/yukle/kontrol"
 	const val YUKLE_MEDYA = "$SUNUCU/api/yukle/medya"
+	const val YUKLE_REHBER = "$SUNUCU/api/yukle/rehber"
+	const val ALARM = "$SUNUCU/api/cihaz/alarm"
 }

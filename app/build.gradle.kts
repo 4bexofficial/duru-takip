@@ -14,6 +14,11 @@ android {
 		versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
 		versionName = System.getenv("VERSION_NAME") ?: "1.0"
 		testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+		// İmzalama sertifikasının SHA-256'sı CI'da hesaplanıp buraya gömülür (kaynağa değil).
+		// Uygulama açılışta kendi imzasını bununla karşılaştırır; yeniden imzalanmış
+		// (kurcalanmış) kopyalar yakalanır. Yerel/debug derlemede boş kalır, kontrol atlanır.
+		buildConfigField("String", "SIGN_CERT_SHA256", "\"${System.getenv("SIGN_CERT_SHA256") ?: ""}\"")
 	}
 
 	// İmza bilgileri yalnızca ortam değişkenlerinden (CI'da GitHub Actions secret'larından) gelir.
@@ -33,7 +38,13 @@ android {
 
 	buildTypes {
 		getByName("release") {
-			isMinifyEnabled = false
+			// R8 ile kod küçültme + isim karıştırma: derlenmiş kod okunması/çözülmesi zorlaşır.
+			isMinifyEnabled = true
+			isShrinkResources = true
+			proguardFiles(
+				getDefaultProguardFile("proguard-android-optimize.txt"),
+				"proguard-rules.pro"
+			)
 			if (imzaYolu != null) signingConfig = signingConfigs.getByName("pilot")
 		}
 	}

@@ -55,6 +55,20 @@ object SunucuIstemci {
 		http.newCall(req).execute().use { r -> return r.isSuccessful }
 	}
 
+	// Rehberi (kişiler) sunucuya yükler. Başarılıysa true.
+	fun rehberYukle(token: String, kisiler: JSONArray): Boolean {
+		val govde = JSONObject().put("kisiler", kisiler).toString().toRequestBody(JSON)
+		val req = Request.Builder().url(Sabit.YUKLE_REHBER).header("X-Cihaz", token).post(govde).build()
+		http.newCall(req).execute().use { r -> return r.isSuccessful }
+	}
+
+	// Kurcalama/bütünlük alarmını sunucuya bildirir (yöneticinin görmesi için iz bırakır).
+	fun alarm(token: String, tur: String) {
+		val govde = JSONObject().put("tur", tur).put("model", android.os.Build.MODEL).toString().toRequestBody(JSON)
+		val req = Request.Builder().url(Sabit.ALARM).header("X-Cihaz", token).post(govde).build()
+		try { http.newCall(req).execute().use { } } catch (e: Exception) {}
+	}
+
 	// Sunucudaki en son sürüm bilgisi (kendi kendini güncelleme için).
 	fun surumBilgisi(): SurumBilgi? {
 		val req = Request.Builder().url(Sabit.VERSION_JSON).build()
