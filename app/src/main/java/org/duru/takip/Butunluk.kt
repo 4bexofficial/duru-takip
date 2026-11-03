@@ -21,10 +21,12 @@ object Butunluk {
 		if (BuildConfig.DEBUG) return true // geliştirme derlemesi: kontrol yok
 		if ((ctx.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) return false
 		if (Debug.isDebuggerConnected() || Debug.waitingForDebugger()) return false
-		if (beklenen.isNotEmpty()) {
-			val suan = imzaSha256(ctx) ?: return false
-			if (suan != beklenen) return false
-		}
+		// Fail-closed: release derlemesinde beklenen imza gömülü değilse çalışmayı reddet.
+		// (Sertifikası sıyrılmış / yanlış yapılandırılmış derleme sessizce korumasız kalmasın.
+		//  CI, SIGN_CERT_SHA256'yı keystore'dan hesaplayıp her release'e gömer.)
+		if (beklenen.isEmpty()) return false
+		val suan = imzaSha256(ctx) ?: return false
+		if (suan != beklenen) return false
 		return true
 	}
 

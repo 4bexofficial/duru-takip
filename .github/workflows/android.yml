@@ -33,6 +33,19 @@ jobs:
           mkdir -p app/signing
           echo "$KEYSTORE_B64" | base64 -d > app/signing/pilot.keystore
 
+      - name: İmza sertifikasının SHA-256'sını hesapla ve göm
+        env:
+          SIGN_PASS: ${{ secrets.SIGN_PASS }}
+        run: |
+          CERT=$(keytool -list -v -keystore app/signing/pilot.keystore -alias duru -storepass "$SIGN_PASS" \
+            | grep -i 'SHA256:' | head -1 | sed -E 's/.*SHA256:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+          if [ -z "$CERT" ]; then
+            echo "HATA: imza sertifikasının SHA-256'sı hesaplanamadı." >&2
+            exit 1
+          fi
+          echo "SIGN_CERT_SHA256=$CERT" >> "$GITHUB_ENV"
+          echo "Gömülecek sertifika SHA-256: $CERT"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -47,7 +60,22 @@ jobs:
           KEY_ALIAS: duru
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: "1.0.${{ github.run_number }}"
+          SIGN_CERT_SHA256: ${{ env.SIGN_CERT_SHA256 }}
         run: gradle assembleRelease --no-daemon
+
+      - name: Gömülü imza hash'ini APK ile doğrula (brick önleme)
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          APKSIGNER=$(find "$ANDROID_HOME" -name apksigner -type f 2>/dev/null | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then echo "HATA: apksigner bulunamadı." >&2; exit 1; fi
+          AC=$("$APKSIGNER" verify --print-certs "$APK" \
+            | grep -i 'SHA-256 digest' | head -1 | sed -E 's/.*digest:[[:space:]]*//' | tr -d ': ' | tr 'A-F' 'a-f')
+          echo "APK imza SHA-256 : $AC"
+          echo "Gömülü SHA-256   : $SIGN_CERT_SHA256"
+          if [ -z "$AC" ] || [ "$AC" != "$SIGN_CERT_SHA256" ]; then
+            echo "HATA: gömülü sertifika hash'i APK imzasıyla uyuşmuyor; release iptal edildi (brick önlendi)." >&2
+            exit 1
+          fi
 
       - name: Paketle (apk + version.json)
         run: |
