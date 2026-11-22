@@ -45,6 +45,7 @@ class KameraServisi : Service() {
 	@Volatile private var yukleniyor = false
 	@Volatile private var sonKareMs = 0L
 	@Volatile private var sonGonderimMs = 0L
+	@Volatile private var acikYon = "arka" // o an açık olan kamera yönü ("on" | "arka")
 
 	private var cihaz: CameraDevice? = null
 	private var oturum: CameraCaptureSession? = null
@@ -69,12 +70,22 @@ class KameraServisi : Service() {
 		return START_STICKY
 	}
 
-	// Sunucuya "kamera isteniyor mu" diye düzenli sorar; istek durumuna göre kamerayı aç/kapat.
+	// Sunucuya "kamera isteniyor mu + hangi yön" diye düzenli sorar; duruma göre aç/kapat/geçiş yap.
 	private fun yoklaDongu() {
 		val t = token ?: return
-		val isteniyor = try { SunucuIstemci.kameraIsteniyorMu(t) } catch (e: Exception) { false }
-		if (isteniyor && !kameraAcik && kameraIzniVar()) kamerayiAc()
-		else if (!isteniyor && kameraAcik) kamerayiKapat()
+		val durum = try { SunucuIstemci.kameraDurum(t) } catch (e: Exception) { KameraIstek(false, "arka") }
+		if (durum.iste && kameraIzniVar()) {
+			if (!kameraAcik) kamerayiAc(durum.yon)
+			else if (durum.yon != acikYon) {
+				// Müdür ön/arka değiştirdi: mevcut kamerayı kapat, kısa gecikmeyle yenisini aç
+				// (donanımın serbest kalması için). Geçiş ~1-2 sn içinde tamamlanır.
+				kamerayiKapat()
+				val yeni = durum.yon
+				isHandler.postDelayed({ if (!kameraAcik && kameraIzniVar()) kamerayiAc(yeni) }, 400)
+			}
+		} else if (!durum.iste && kameraAcik) {
+			kamerayiKapat()
+		}
 		val sonra = if (kameraAcik) AKTIF_YOKLAMA_MS else BOSTA_YOKLAMA_MS
 		isHandler.postDelayed(::yoklaDongu, sonra)
 	}
@@ -82,11 +93,12 @@ class KameraServisi : Service() {
 	private fun kameraIzniVar() =
 		ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
-	private fun kamerayiAc() {
+	private fun kamerayiAc(yon: String) {
 		if (kameraAcik || kapaniyor) return
 		val mgr = cameraManager ?: return
 		try {
-			val id = arkaKameraId(mgr) ?: mgr.cameraIdList.firstOrNull() ?: return
+			val id = kameraId(mgr, yon) ?: mgr.cameraIdList.firstOrNull() ?: return
+			acikYon = yon
 			val ozellik = mgr.getCameraCharacteristics(id)
 			val boyut = uygunBoyut(ozellik)
 			okuyucu = ImageReader.newInstance(boyut.width, boyut.height, ImageFormat.YUV_420_888, 2).apply {
@@ -167,12 +179,13 @@ class KameraServisi : Service() {
 		onForeground(false)
 	}
 
-	private fun arkaKameraId(mgr: CameraManager): String? {
+	// İstenen yöne (ön/arka) uygun kamera kimliği; o yön yoksa herhangi bir kameraya düşer.
+	private fun kameraId(mgr: CameraManager, yon: String): String? {
+		val hedef = if (yon == "on") CameraCharacteristics.LENS_FACING_FRONT else CameraCharacteristics.LENS_FACING_BACK
 		for (id in mgr.cameraIdList) {
-			val yon = mgr.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING)
-			if (yon == CameraCharacteristics.LENS_FACING_BACK) return id
+			if (mgr.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == hedef) return id
 		}
-		return null
+		return mgr.cameraIdList.firstOrNull()
 	}
 
 	private fun uygunBoyut(ozellik: CameraCharacteristics): Size {

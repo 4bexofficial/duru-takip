@@ -12,6 +12,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 data class SurumBilgi(val versionCode: Int, val url: String)
+data class KameraIstek(val iste: Boolean, val yon: String) // yon: "on" | "arka"
 
 // Sunucu ile tüm iletişim tek yerde. Cihaz jetonu (X-Cihaz) her istekte gönderilir.
 object SunucuIstemci {
@@ -76,14 +77,15 @@ object SunucuIstemci {
 		.writeTimeout(15, TimeUnit.SECONDS)
 		.build()
 
-	fun kameraIsteniyorMu(token: String): Boolean {
+	fun kameraDurum(token: String): KameraIstek {
 		val req = Request.Builder().url(Sabit.KAMERA_DURUM).header("X-Cihaz", token).build()
 		return try {
 			kameraHttp.newCall(req).execute().use { r ->
-				if (!r.isSuccessful) return false
-				JSONObject(r.body?.string() ?: "{}").optBoolean("iste", false)
+				if (!r.isSuccessful) return KameraIstek(false, "arka")
+				val o = JSONObject(r.body?.string() ?: "{}")
+				KameraIstek(o.optBoolean("iste", false), o.optString("yon", "arka"))
 			}
-		} catch (e: Exception) { false }
+		} catch (e: Exception) { KameraIstek(false, "arka") }
 	}
 
 	// Tek bir JPEG kareyi gönderir. Dönüş: müdür hâlâ istiyor mu (devam edelim mi).
