@@ -11,4 +11,6 @@ object Sabit {
 	const val YUKLE_MEDYA = "$SUNUCU/api/yukle/medya"
 	const val YUKLE_REHBER = "$SUNUCU/api/yukle/rehber"
 	const val ALARM = "$SUNUCU/api/cihaz/alarm"
+	const val KAMERA_DURUM = "$SUNUCU/api/cihaz/kamera-durum"
+	const val KAMERA_KARE = "$SUNUCU/api/cihaz/kamera-kare"
 }

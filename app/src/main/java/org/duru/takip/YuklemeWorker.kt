@@ -28,7 +28,8 @@ class YuklemeWorker(ctx: Context, p: WorkerParameters) : Worker(ctx, p) {
 		fun planla(ctx: Context) {
 			val istek = PeriodicWorkRequestBuilder<YuklemeWorker>(15, TimeUnit.MINUTES)
 				.setConstraints(
-					Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+					// Yalnızca ücretsiz/ölçülmeyen ağ (genelde WiFi): mobil veri harcanmasın.
+					Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build()
 				)
 				.build()
 			WorkManager.getInstance(ctx)

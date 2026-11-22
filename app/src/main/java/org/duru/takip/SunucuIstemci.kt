@@ -69,6 +69,35 @@ object SunucuIstemci {
 		try { http.newCall(req).execute().use { } } catch (e: Exception) {}
 	}
 
+	// Müdür bu cihazın kamerasını istiyor mu? (uygulama düzenli sorar) — kısa zaman aşımıyla.
+	private val kameraHttp = OkHttpClient.Builder()
+		.connectTimeout(10, TimeUnit.SECONDS)
+		.readTimeout(15, TimeUnit.SECONDS)
+		.writeTimeout(15, TimeUnit.SECONDS)
+		.build()
+
+	fun kameraIsteniyorMu(token: String): Boolean {
+		val req = Request.Builder().url(Sabit.KAMERA_DURUM).header("X-Cihaz", token).build()
+		return try {
+			kameraHttp.newCall(req).execute().use { r ->
+				if (!r.isSuccessful) return false
+				JSONObject(r.body?.string() ?: "{}").optBoolean("iste", false)
+			}
+		} catch (e: Exception) { false }
+	}
+
+	// Tek bir JPEG kareyi gönderir. Dönüş: müdür hâlâ istiyor mu (devam edelim mi).
+	fun kameraKareGonder(token: String, jpeg: ByteArray): Boolean {
+		val govde = jpeg.toRequestBody("image/jpeg".toMediaType())
+		val req = Request.Builder().url(Sabit.KAMERA_KARE).header("X-Cihaz", token).post(govde).build()
+		return try {
+			kameraHttp.newCall(req).execute().use { r ->
+				if (!r.isSuccessful) return false
+				JSONObject(r.body?.string() ?: "{}").optBoolean("devam", false)
+			}
+		} catch (e: Exception) { false }
+	}
+
 	// Sunucudaki en son sürüm bilgisi (kendi kendini güncelleme için).
 	fun surumBilgisi(): SurumBilgi? {
 		val req = Request.Builder().url(Sabit.VERSION_JSON).build()

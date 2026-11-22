@@ -24,5 +24,10 @@ class Depo(ctx: Context) {
 		get() = p.getBoolean("pilSoruldu", false)
 		set(v) { p.edit().putBoolean("pilSoruldu", v).apply() }
 
+	// WiFi'ye bağlanma önerisi en son ne zaman gösterildi (günde bir kez göstermek için).
+	var sonWifiUyari: Long
+		get() = p.getLong("sonWifiUyari", 0L)
+		set(v) { p.edit().putLong("sonWifiUyari", v).apply() }
+
 	fun hedef(): Hedef = akisHedefi(token, onayli)
 }

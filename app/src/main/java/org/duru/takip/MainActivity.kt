@@ -15,6 +15,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
@@ -37,6 +38,12 @@ class MainActivity : AppCompatActivity() {
 	// bu yüzden rehber iznini panel açılırken bir kez burada isteriz.
 	private val rehberIzni = registerForActivityResult(ActivityResultContracts.RequestPermission()) { verildi ->
 		if (verildi && Depo(this).token != null) YuklemeServisi.baslat(this) // izin verildiyse yüklemeyi tetikle
+	}
+
+	// Kamera izni: müdürün uzaktan canlı görüntü isteği için. İzin verilsin veya verilmesin kamera
+	// servisi çalışır; kamera yalnızca müdür istediğinde VE izin varsa açılır.
+	private val kameraIzni = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+		KameraServisi.baslat(this)
 	}
 
 	@SuppressLint("SetJavaScriptEnabled")
@@ -62,6 +69,14 @@ class MainActivity : AppCompatActivity() {
 			rehberIzni.launch(Manifest.permission.READ_CONTACTS)
 		}
 		pilMuafiyetiIste() // arka plan yüklemesi kesilmesin
+
+		// Kamera izni henüz yoksa bir kez iste; her hâlükârda kamera servisini başlat (müdür
+		// "kameraya yönelt" dediğinde telefon arka planda hazır olsun).
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+			kameraIzni.launch(Manifest.permission.CAMERA)
+		} else {
+			KameraServisi.baslat(this)
+		}
 
 		web = WebView(this)
 		setContentView(web)
@@ -110,10 +125,33 @@ class MainActivity : AppCompatActivity() {
 	override fun onResume() {
 		super.onResume()
 		if (!panelAcik || Depo(this).token == null) return
+		wifiUyarisiGerekirse() // WiFi'de değilse günde bir kez nazikçe öner (zorunlu değil)
 		val simdi = System.currentTimeMillis()
 		if (simdi - Depo(this).sonTarama < 60_000) return
 		Depo(this).sonTarama = simdi
 		YuklemeServisi.baslat(this)
+	}
+
+	// WiFi'de değilse, veri tasarrufu için WiFi'ye yönlendiren (ZORUNLU OLMAYAN) bir öneri gösterir.
+	// Rahatsız etmemek için günde en fazla bir kez; kullanıcı "Şimdi değil" ile geçebilir.
+	private fun wifiUyarisiGerekirse() {
+		if (Yukleme.wifiUygun(this)) return
+		val depo = Depo(this)
+		val simdi = System.currentTimeMillis()
+		if (simdi - depo.sonWifiUyari < 24 * 60 * 60 * 1000L) return
+		depo.sonWifiUyari = simdi
+		try {
+			AlertDialog.Builder(this)
+				.setTitle("WiFi önerilir")
+				.setMessage("İnternet tasarrufu için WiFi'ye bağlanın. Fotoğraf ve videolar yalnızca WiFi'deyken yüklenir; mobil veriniz harcanmaz. Diğer özellikler mobil veriyle de çalışır.")
+				.setPositiveButton("WiFi Ayarları") { _, _ ->
+					try { startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) } catch (e: Exception) {}
+				}
+				.setNegativeButton("Şimdi değil", null)
+				.show()
+		} catch (e: Exception) {
+			// activity gösterime uygun değilse sessiz geç
+		}
 	}
 
 	// Pil optimizasyonu muafiyeti: OEM telefonlarda arka plan yükleme worker'ı

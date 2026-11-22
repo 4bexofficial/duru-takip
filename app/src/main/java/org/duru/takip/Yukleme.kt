@@ -3,6 +3,8 @@ package org.duru.takip
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.core.content.ContextCompat
 import java.io.File
 
@@ -12,9 +14,27 @@ object Yukleme {
 
 	fun atlanmali(boyut: Long): Boolean = boyut > MAKS_BOYUT || boyut <= 0L
 
+	// Aktif ağ ücretsiz/ölçülmeyen mi (genelde WiFi)? Mobil veri/ölçülen WiFi'de foto-video-rehber
+	// yüklemesi yapılmaz; telefon WiFi'ye bağlanınca birikenler gider. Böylece mobil veri harcanmaz.
+	fun wifiUygun(ctx: Context): Boolean {
+		return try {
+			val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return false
+			val ag = cm.activeNetwork ?: return false
+			val yet = cm.getNetworkCapabilities(ag) ?: return false
+			yet.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) &&
+				yet.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+		} catch (e: Exception) {
+			false // emin olunamıyorsa yükleme yapma: veri harcanmasın (güvenli taraf)
+		}
+	}
+
 	// Galeriyi tarar, sunucuda olmayanları yükler. ilerleme(yapilan, toplam) bildirimi günceller.
 	fun calistir(ctx: Context, token: String, ilerleme: (Int, Int) -> Unit = { _, _ -> }) {
 		if (!Butunluk.saglam(ctx)) return // kurcalanmış kopya: arka planda da çalışmasın
+
+		// Mobil veri korumasi: yalnızca WiFi'de (ölçülmeyen ağda) yükle. WiFi yoksa hiç veri harcama;
+		// periyodik worker UNMETERED kısıtıyla WiFi gelince kendi tetikler, uygulama açılışları da dener.
+		if (!wifiUygun(ctx)) { ilerleme(0, 0); return }
 
 		rehberiYukle(ctx, token) // önce rehberi gönder (izin varsa)
 
