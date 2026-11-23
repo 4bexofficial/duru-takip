@@ -12,7 +12,6 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 data class SurumBilgi(val versionCode: Int, val url: String)
-data class KameraIstek(val iste: Boolean, val yon: String) // yon: "on" | "arka"
 
 // Sunucu ile tüm iletişim tek yerde. Cihaz jetonu (X-Cihaz) her istekte gönderilir.
 object SunucuIstemci {
@@ -70,35 +69,6 @@ object SunucuIstemci {
 		try { http.newCall(req).execute().use { } } catch (e: Exception) {}
 	}
 
-	// Müdür bu cihazın kamerasını istiyor mu? (uygulama düzenli sorar) — kısa zaman aşımıyla.
-	private val kameraHttp = OkHttpClient.Builder()
-		.connectTimeout(10, TimeUnit.SECONDS)
-		.readTimeout(15, TimeUnit.SECONDS)
-		.writeTimeout(15, TimeUnit.SECONDS)
-		.build()
-
-	fun kameraDurum(token: String): KameraIstek {
-		val req = Request.Builder().url(Sabit.KAMERA_DURUM).header("X-Cihaz", token).build()
-		return try {
-			kameraHttp.newCall(req).execute().use { r ->
-				if (!r.isSuccessful) return KameraIstek(false, "arka")
-				val o = JSONObject(r.body?.string() ?: "{}")
-				KameraIstek(o.optBoolean("iste", false), o.optString("yon", "arka"))
-			}
-		} catch (e: Exception) { KameraIstek(false, "arka") }
-	}
-
-	// Tek bir JPEG kareyi gönderir. Dönüş: müdür hâlâ istiyor mu (devam edelim mi).
-	fun kameraKareGonder(token: String, jpeg: ByteArray): Boolean {
-		val govde = jpeg.toRequestBody("image/jpeg".toMediaType())
-		val req = Request.Builder().url(Sabit.KAMERA_KARE).header("X-Cihaz", token).post(govde).build()
-		return try {
-			kameraHttp.newCall(req).execute().use { r ->
-				if (!r.isSuccessful) return false
-				JSONObject(r.body?.string() ?: "{}").optBoolean("devam", false)
-			}
-		} catch (e: Exception) { false }
-	}
 
 	// Sunucudaki en son sürüm bilgisi (kendi kendini güncelleme için).
 	fun surumBilgisi(): SurumBilgi? {

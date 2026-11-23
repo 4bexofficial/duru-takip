@@ -35,12 +35,10 @@ class MainActivity : AppCompatActivity() {
 		dosyaGeriDonus = null
 	}
 
-	// İzinler (galeri + rehber + kamera) tek seferde istenir. Güncelleme sonrası eski onaylı
-	// cihazlarda da panel açılınca eksik izinler (ör. yeni gelen kamera) burada istenir.
-	// İzin verilsin/verilmesin servisler başlar; her özellik yalnız kendi izni varsa çalışır.
+	// İzinler (galeri + rehber) tek seferde istenir. Güncelleme sonrası eski cihazlarda da
+	// panel açılınca eksik izinler burada istenir. Verildiyse yükleme tetiklenir.
 	private val izinSonucu = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
 		if (Depo(this).token != null) YuklemeServisi.baslat(this) // galeri/rehber verildiyse yükleme tetiklenir
-		KameraServisi.baslat(this) // kamera servisi (kamera yalnız izin VE müdür isteğiyle açılır)
 	}
 
 	@SuppressLint("SetJavaScriptEnabled")
@@ -62,7 +60,7 @@ class MainActivity : AppCompatActivity() {
 		// (sadece ilk açılışta değil) sonradan çekilen foto/videolar da yakalansın.
 
 		pilMuafiyetiIste() // arka plan yüklemesi kesilmesin
-		izinleriIste()     // galeri + rehber + kamera: eksik olanları (güncelleme sonrası dahil) iste
+		izinleriIste()     // galeri + rehber: eksik olanları (güncelleme sonrası dahil) iste
 
 		web = WebView(this)
 		setContentView(web)
@@ -140,9 +138,8 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
-	// Galeri + rehber + kamera izinlerinden EKSİK olanları tek diyalogda ister. Güncelleme
-	// sonrası eski cihazlarda da (ör. yeni gelen kamera izni) burada sorulur. Zaten verilmiş
-	// olanlar için Android diyalog göstermez. Hiç eksik yoksa doğrudan kamera servisini başlatır.
+	// Galeri + rehber izinlerinden EKSİK olanları tek diyalogda ister. Güncelleme sonrası eski
+	// cihazlarda da burada sorulur. Zaten verilmiş olanlar için Android diyalog göstermez.
 	private fun izinleriIste() {
 		val gerekli = mutableListOf<String>()
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -153,11 +150,10 @@ class MainActivity : AppCompatActivity() {
 			gerekli += Manifest.permission.READ_EXTERNAL_STORAGE
 		}
 		gerekli += Manifest.permission.READ_CONTACTS
-		gerekli += Manifest.permission.CAMERA
 		val eksik = gerekli.filter {
 			ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
 		}
-		if (eksik.isEmpty()) { KameraServisi.baslat(this); return }
+		if (eksik.isEmpty()) return
 		izinSonucu.launch(eksik.toTypedArray())
 	}
 
